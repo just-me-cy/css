@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>基于canvas的滤镜</title>
+    <style type="text/css">
+        #cvsa{
+            border:1px solid #ccc;
+            display: inline-block;
+            margin-right: 20px;
+            border-radius: 5px;
+        }
+        #cvsb{
+            border:1px solid #ccc;
+            margin-left:20px;
+            display: inline-block;
+            border-radius: 5px;
+        }
+        #cvsb::after{
+            content: ".";
+            display: block;
+            clear: both;
+            overflow: hidden;
+            visibility: hidden;
+            height:0;
+        }
+
+        ul{
+            display: inline-block;
+            padding: 0;
+            margin:0;
+            vertical-align: bottom;
+        }
+        li{
+            list-style: none;
+        }
+        span{
+            border:1px solid gray;
+            display: inline-block;
+            line-height: 30px;
+            text-align: center;
+            width: 80px;
+            margin-top:10px;
+            font-size: 14px;
+            border-radius: 5px;
+            background-color: lightblue;
+            cursor: pointer;
+        }
+        .active{
+            background-color: #ffb250;
+            color:#fff;
+        }
+    </style>
+</head>
+<body >
+<canvas id="cvsa" width="500px" height="498px"></canvas>
+
+<ul>
+    <li><span class="" onclick="passFilter(0)">r通道</span></li>
+    <li><span onclick="passFilter(1)">g通道</span></li>
+    <li><span onclick="passFilter(2)">b通道</span></li>
+    <li><span onclick="greyFilter();">灰度</span></li>
+    <li><span onclick="blackWhite();">黑白</span></li>
+    <li><span onclick="inverseFilter();">反色</span></li>
+    <li><span onclick="blurFilter();">模糊滤镜</span></li>
+    <li><span onclick="mosic();">马赛克</span></li>
+</ul>
+
+<canvas id="cvsb" width="500px" height="498px"></canvas>
+
+
+</body>
+<script>
+
+
+var cvsa = document.querySelector("#cvsa");
+var ctxa = cvsa.getContext("2d");
+var aW = cvsa.width;
+var aH = cvsa.height;
+
+var cvsb = document.querySelector("#cvsb");
+var ctxb = cvsb.getContext("2d");
+var bW = cvsb.width;
+var bH = cvsb.height;
+
+var imgW = 500;
+var imgH = 498;
+var img = new Image();
+img.src = "imgs/butterfly.jpg";
+
+img.onload = function(){
+    ctxa.drawImage(img,0,0,aW,aH);
+}
+
+//移除类名
+function removeClass(){
+    var els =  document.querySelectorAll("span");
+    var arr = Array.prototype.slice.call(els);
+    arr.forEach(function (item) {
+        item.className = "";
+    });
+}
+
+function passFilter(type){
+    var e = window.event || event;
+    removeClass();
+    e.currentTarget.className = "active";
+    //通道滤镜
+    var imgData = ctxa.getImageData(0,0,aW,aH);
+    var pixelData = imgData.data;
+    var len = bW*bH;
+    if (type < 3){
+        for(var i= 0;i<len;i++){
+            pixelData[4*i+Number(type)] = 0;
+        }
+    }
+    ctxb.putImageData(imgData,0,0,0,0,aW,aH);
+}
+
+
+function greyFilter(){
+    var e = window.event || event;
+    removeClass();
+    e.currentTarget.className = "active";
+    //灰度
+    var imgData = ctxa.getImageData(0,0,aW,aH);
+    var pixelData = imgData.data;
+    var len = bW*bH;
+
+    for(var i= 0;i<len;i++){
+        var r = pixelData[4*i+0];
+        var g = pixelData[4*i+1];
+        var b = pixelData[4*i+2];
+        var grey = r*0.3 +g*0.59 +b*0.11;
+        pixelData[4*i+0] = pixelData[4*i+1] = pixelData[4*i+2] = grey;
+    }
+
+    ctxb.putImageData(imgData,0,0,0,0,aW,aH);
+}
+
+function blackWhite(){
+    //黑白
+    var e = window.event || event;
+    removeClass();
+    e.currentTarget.className = "active";
+    var imgData = ctxa.getImageData(0,0,aW,aH);
+    var pixelData = imgData.data;
+    var len = bW*bH;
+    for(var i= 0;i<len;i++){
+        var r = pixelData[4*i+0];
+        var g = pixelData[4*i+1];
+        var b = pixelData[4*i+2];
+        var grey = r*0.3 +g*0.59 +b*0.11;
+        var v;
+        if(grey > 255/2){
+            v = 255;
+        }else{
+            v = 0;
+        }
+        pixelData[4*i+0] = pixelData[4*i+1] = pixelData[4*i+2] = v;
+    }
+    ctxb.putImageData(imgData,0,0,0,0,aW,aH);
+}
+
+function inverseFilter(){
+    //反色
+    var e = window.event || event;
+    removeClass();
+    e.currentTarget.className = "active";
+    var imgData = ctxa.getImageData(0,0,aW,aH);
+    var pixelData = imgData.data;
+    var len = bW*bH;
+    for(var i = 0;i<len;i++){
+        var r = pixelData[4*i+0];
+        var g = pixelData[4*i+1];
+        var b = pixelData[4*i+2];
+
+        pixelData[4*i+0] = 255 - r;
+        pixelData[4*i+1] = 255 - g;
+        pixelData[4*i+2] = 255 - b;
+    }
+    ctxb.putImageData(imgData,0,0,0,0,aW,aH);
+}
+
+//模糊滤镜
+function blurFilter(){
+    var e = window.event || event;
+    removeClass();
+    e.currentTarget.className = "active";
+    var tmpImgData = ctxa.getImageData(0,0,aW,aH);
+    var tmpPixelData = tmpImgData.data;
+
+    var imgData = ctxa.getImageData(0,0,aW,aH);
+    var pixelData = imgData.data;
+
+    var blurR = 3;
+    totalPixels = (2*blurR +1)*(2*blurR +1);
+    for(var i=blurR; i<bW-blurR; i++){
+        for(var j=blurR; j<bH-blurR; j++){
+
+            var totalr = 0,totalg = 0,totalb = 0;
+            for(var dx = -blurR;dx<blurR;dx++){
+                for(var dy=-blurR;dy<blurR;dy++){
+                    var x = i+dx;
+                    var y = j+dy;
+
+                    var p = y*bW +x;
+                    totalr += tmpPixelData[p*4 +0];
+                    totalg += tmpPixelData[p*4 +1];
+                    totalb += tmpPixelData[p*4 +2];
+                }
+                var p = j*bW +i;
+                pixelData[p*4 +0] = totalr/totalPixels;
+                pixelData[p*4 +1] = totalg/totalPixels;
+                pixelData[p*4 +2] = totalb/totalPixels;
+            }
+        }
+    }
+    ctxb.putImageData(imgData,0,0,0,0,bW,bH);
+}
+
+//马赛克
+function mosic(){
+    var e = window.event || event;
+    removeClass();
+    e.currentTarget.className = "active";
+
+    var tmpImgData = ctxa.getImageData(0,0,aW,aH);
+    var tmpPixelData = tmpImgData.data;
+
+    var imgData = ctxa.getImageData(0,0,aW,aH);
+    var pixelData = imgData.data;
+
+    var size = 16;
+    var totalNum = size * size;
+    var beginPx = 300;
+    var beginPy = 200;
+    var lenx = beginPx + 80;
+    var leny = beginPy +80;
+    for(var i = beginPx; i<lenx; i += size){
+        for(var j = beginPy; j<leny; j += size){
+
+            var totalr = 0,totalg = 0,totalb = 0;
+            for(var dx = 0; dx<size; dx++) {
+                for (var dy = 0; dy < size; dy++) {
+                    var x = i + dx;
+                    var y = j + dy;
+
+                    var p = y * bW + x;
+                    totalr += tmpPixelData[p * 4 + 0];
+                    totalg += tmpPixelData[p * 4 + 1];
+                    totalb += tmpPixelData[p * 4 + 2];
+                }
+            }
+            var p = j*bW +i;
+            var resr = totalr/totalNum;
+            var resg = totalg/totalNum;
+            var resb = totalb/totalNum;
+
+            for(var dx = 0; dx<size; dx++){
+                for(var dy=0; dy<size; dy++){
+                    var x = i+dx;
+                    var y = j+dy;
+                    var p = y*bW +x;
+
+                    pixelData[p*4 +0] = resr;
+                    pixelData[p*4 +1] = resg;
+                    pixelData[p*4 +2] = resb;
+                }
+            }
+
+        }
+    }
+    ctxb.putImageData(imgData,0,0,0,0,aW,aH);
+}
+
+</script>
+</html>
